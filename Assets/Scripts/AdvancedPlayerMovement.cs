@@ -8,11 +8,14 @@ public class AdvancedPlayerMovement : MonoBehaviour
     private Rigidbody rb;
     private Vector2 moveInput;
     private bool jumpPressed;
+    private bool isSprinting;
 
     [Header("Movement Settings")]
-    public float moveSpeed = 5f;
+    public float walkSpeed = 5f;
+    public float sprintSpeed = 9f;
     public float jumpForce = 7f;
-    public float airControl = 0.5f;
+    public float airControl = 0.4f;
+    public float rotationSpeed = 10f;
 
     [Header("Ground Check")]
     public Transform groundCheck;
@@ -28,8 +31,9 @@ public class AdvancedPlayerMovement : MonoBehaviour
 
         controls.Player.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
         controls.Player.Move.canceled += ctx => moveInput = Vector2.zero;
-
         controls.Player.Jump.performed += ctx => jumpPressed = true;
+        controls.Player.Sprint.performed += ctx => isSprinting = true;
+        controls.Player.Sprint.canceled += ctx => isSprinting = false;
     }
 
     private void OnEnable() => controls.Player.Enable();
@@ -46,11 +50,18 @@ public class AdvancedPlayerMovement : MonoBehaviour
 
         Vector3 move = new Vector3(moveInput.x, 0, moveInput.y).normalized;
 
+        float speed = isSprinting ? sprintSpeed : walkSpeed;
         float controlFactor = isGrounded ? 1f : airControl;
-        Vector3 moveVelocity = move * moveSpeed * controlFactor;
 
+        Vector3 moveVelocity = move * speed * controlFactor;
         Vector3 targetVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
         rb.linearVelocity = targetVelocity;
+
+        if (move != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(move);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+        }
 
         if (jumpPressed && isGrounded)
         {
